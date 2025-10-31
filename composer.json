@@ -1,0 +1,100 @@
+{
+  "name": "tourze/duration-billing-bundle",
+  "description": "基于时长计费的商品和订单管理包，支持停车场收费、共享充电宝、共享单车等按时长计费场景",
+  "type": "symfony-bundle",
+  "keywords": [
+    "symfony",
+    "billing",
+    "duration",
+    "pricing",
+    "parking",
+    "sharing"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Tourze Development Team",
+      "email": "dev@tourze.com"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "doctrine/dbal": "^4.0",
+    "doctrine/doctrine-bundle": "^2.13",
+    "doctrine/orm": "^3.0",
+    "doctrine/persistence": "^4.1",
+    "easycorp/easyadmin-bundle": "^4",
+    "knplabs/knp-menu": "^3.7",
+    "nesbot/carbon": "^2.72 || ^3",
+    "symfony/config": "^7.3",
+    "symfony/console": "^7.3",
+    "symfony/dependency-injection": "^7.3",
+    "symfony/doctrine-bridge": "^7.3",
+    "symfony/event-dispatcher": "^7.3",
+    "symfony/event-dispatcher-contracts": "^3",
+    "symfony/framework-bundle": "^7.3",
+    "symfony/http-foundation": "^7.3",
+    "symfony/http-kernel": "^7.3",
+    "symfony/validator": "^7.3",
+    "symfony/yaml": "^7.3",
+    "tourze/bundle-dependency": "1.*",
+    "tourze/doctrine-indexed-bundle": "0.0.*",
+    "tourze/doctrine-snowflake-bundle": "0.1.*",
+    "tourze/doctrine-timestamp-bundle": "0.0.*",
+    "tourze/easy-admin-enum-field-bundle": "0.0.*",
+    "tourze/easy-admin-menu-bundle": "0.1.*",
+    "tourze/enum-extra": "0.1.*",
+    "tourze/symfony-dependency-service-loader": "0.0.*"
+  },
+  "require-dev": {
+    "doctrine/data-fixtures": "^2.0",
+    "doctrine/doctrine-fixtures-bundle": "^4.0",
+    "phpstan/phpstan": "^2.1",
+    "phpstan/phpstan-doctrine": "^2.0",
+    "phpstan/phpstan-symfony": "^2.0",
+    "phpunit/phpunit": "^11.5",
+    "symfony/phpunit-bridge": "^7.3",
+    "tourze/biz-user-bundle": "0.0.*",
+    "tourze/phpunit-base": "1.*",
+    "tourze/phpunit-doctrine-entity": "0.0.*",
+    "tourze/phpunit-enum": "0.0.*",
+    "tourze/phpunit-symfony-kernel-test": "0.0.*",
+    "tourze/phpunit-symfony-unit-test": "0.0.*",
+    "tourze/phpunit-symfony-web-test": "0.0.*",
+    "tourze/symfony-testing-framework": "0.0.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Tourze\\DurationBillingBundle\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tourze\\DurationBillingBundle\\Tests\\": "tests"
+    }
+  },
+  "extra": {
+    "symfony": {
+      "allow-contrib": false
+    }
+  },
+  "scripts": {
+    "test": "../../vendor/bin/phpunit -c ../../phpunit.xml tests/",
+    "test-coverage": "../../vendor/bin/phpunit tests/ --coverage-html coverage",
+    "phpstan": "../../vendor/bin/phpstan analyse -c ../../phpstan.neon src tests",
+    "cs-fix": "../../vendor/bin/php-cs-fixer fix --config=../../.php-cs-fixer.php src tests",
+    "cs-check": "../../vendor/bin/php-cs-fixer fix --config=../../.php-cs-fixer.php --dry-run --diff src tests",
+    "quality": [
+      "@cs-check",
+      "@phpstan",
+      "@test"
+    ]
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "symfony/runtime": true
+    }
+  },
+  "version": "0.1.0"
+}

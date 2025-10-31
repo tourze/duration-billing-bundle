@@ -1,0 +1,38 @@
+services:
+  # default configuration for services in *this* file
+  _defaults:
+    autowire: true      # Automatically injects dependencies in your services.
+    autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+    public: false
+
+  # 批量注册服务
+  Tourze\DurationBillingBundle\Service\:
+    resource: '../../Service/'
+
+  Tourze\DurationBillingBundle\Repository\:
+    resource: '../../Repository/'
+    tags:
+      - { name: 'doctrine.repository_service' }
+
+  # CRUD 控制器
+  Tourze\DurationBillingBundle\Controller\:
+    resource: '../../Controller/'
+    tags: ['controller.service_arguments']
+
+  # 主服务配置
+  Tourze\DurationBillingBundle\Service\DurationBillingService:
+    public: true
+    arguments:
+      $eventDispatcher: '@event_dispatcher'
+
+  # 服务别名
+  Tourze\DurationBillingBundle\Service\DurationBillingServiceInterface: '@Tourze\DurationBillingBundle\Service\DurationBillingService'
+  Tourze\DurationBillingBundle\Contract\DurationBillingOrderRepositoryInterface: '@Tourze\DurationBillingBundle\Repository\DurationBillingOrderRepository'
+  Tourze\DurationBillingBundle\Contract\DurationBillingProductRepositoryInterface: '@Tourze\DurationBillingBundle\Repository\DurationBillingProductRepository'
+
+  # 公开别名
+  duration_billing.service: '@Tourze\DurationBillingBundle\Service\DurationBillingService'
+  duration_billing.state_machine: '@Tourze\DurationBillingBundle\Service\OrderStateMachine'
+  duration_billing.price_calculator: '@Tourze\DurationBillingBundle\Service\PriceCalculator'
+  duration_billing.order_repository: '@Tourze\DurationBillingBundle\Repository\DurationBillingOrderRepository'
+  duration_billing.product_repository: '@Tourze\DurationBillingBundle\Repository\DurationBillingProductRepository'

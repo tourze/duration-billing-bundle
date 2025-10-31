@@ -1,0 +1,13 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  Tourze\DurationBillingBundle\DataFixtures\DurationBillingFixtures:
+    tags: ['doctrine.fixture.orm']
+  
+  Tourze\DurationBillingBundle\DataFixtures\DurationBillingOrderFixtures:
+    tags: ['doctrine.fixture.orm']
+  
+  Tourze\DurationBillingBundle\DataFixtures\DurationBillingProductFixtures:
+    tags: ['doctrine.fixture.orm']
