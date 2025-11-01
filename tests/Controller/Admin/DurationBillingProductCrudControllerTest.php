@@ -42,8 +42,7 @@ final class DurationBillingProductCrudControllerTest extends AbstractEasyAdminCo
 
     public function testIndexPage(): void
     {
-        $client = self::createClientWithDatabase();
-        $this->loginAsAdmin($client);
+        $client = self::createAuthenticatedClient();
 
         $crawler = $client->request('GET', '/admin');
         self::assertEquals(Response::HTTP_OK, $client->getResponse()->getStatusCode());
