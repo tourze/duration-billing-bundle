@@ -55,7 +55,7 @@
     "phpstan/phpstan-symfony": "^2.0",
     "phpunit/phpunit": "^11.5",
     "symfony/phpunit-bridge": "^7.3",
-    "tourze/biz-user-bundle": "0.0.*",
+    "symfony/security-core": "^7.3",
     "tourze/phpunit-base": "1.*",
     "tourze/phpunit-doctrine-entity": "1.*",
     "tourze/phpunit-enum": "1.*",

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\DurationBillingBundle\Tests\Service;
 
-use BizUserBundle\Entity\BizUser;
+use Symfony\Component\Security\Core\User\UserInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\DurationBillingBundle\Entity\DurationBillingOrder;
@@ -54,20 +54,17 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         // 创建测试用户
         $user = $this->createNormalUser('billing-user@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
         // 开始计费
         $productId = $product->getId();
         $this->assertNotNull($productId, 'Product ID should not be null');
 
-        $order = $this->billingService->startBilling($productId, (string) $user->getId());
+        $order = $this->billingService->startBilling($productId, $user->getUserIdentifier());
 
         // 验证订单创建成功
         $this->assertInstanceOf(DurationBillingOrder::class, $order);
         $this->assertSame(OrderStatus::ACTIVE, $order->getStatus());
         $this->assertSame($product->getId(), $order->getProduct()->getId());
-        $this->assertSame((string) $user->getId(), $order->getUserId());
+        $this->assertSame($user->getUserIdentifier(), $order->getUserId());
         $this->assertNotNull($order->getOrderCode());
         $this->assertNotNull($order->getStartTime());
         $this->assertNull($order->getEndTime());
@@ -92,9 +89,6 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         // 创建测试用户
         $user = $this->createNormalUser('prepaid-user@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
         // 开始预付费计费
         $prepaidAmount = 20.0;
         $productId = $product->getId();
@@ -102,7 +96,7 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
 
         $order = $this->billingService->startBilling(
             $productId,
-            (string) $user->getId(),
+            $user->getUserIdentifier(),
             ['prepaid_amount' => $prepaidAmount]
         );
 
@@ -129,9 +123,6 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         // 创建测试用户
         $user = $this->createNormalUser('metadata-user@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
         // 带元数据开始计费
         $metadata = [
             'device_id' => 'DEV-001',
@@ -143,7 +134,7 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
 
         $order = $this->billingService->startBilling(
             $productId,
-            (string) $user->getId(),
+            $user->getUserIdentifier(),
             ['metadata' => $metadata]
         );
 
@@ -155,13 +146,10 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
     {
         $user = $this->createNormalUser('test-user@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
         $this->expectException(ProductNotFoundException::class);
         $this->expectExceptionMessage('Product with ID 99999 not found');
 
-        $this->billingService->startBilling(99999, (string) $user->getId());
+        $this->billingService->startBilling(99999, $user->getUserIdentifier());
     }
 
     public function testFreezeBillingFlow(): void
@@ -268,16 +256,13 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         // 创建测试用户
         $user = $this->createNormalUser('refund-user@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
         // 开始预付费计费（预付100元）
         $productId = $product->getId();
         $this->assertNotNull($productId, 'Product ID should not be null');
 
         $order = $this->billingService->startBilling(
             $productId,
-            (string) $user->getId(),
+            $user->getUserIdentifier(),
             ['prepaid_amount' => 100.0]
         );
 
@@ -332,19 +317,15 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         $user1 = $this->createNormalUser('user1@test.com', 'password');
         $user2 = $this->createNormalUser('user2@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user1);
-        self::assertInstanceOf(BizUser::class, $user2);
-
         // 为用户1创建两个活跃订单
-        [$order1] = $this->createActiveOrderForUser((string) $user1->getId());
-        [$order2] = $this->createActiveOrderForUser((string) $user1->getId());
+        [$order1] = $this->createActiveOrderForUser($user1->getUserIdentifier());
+        [$order2] = $this->createActiveOrderForUser($user1->getUserIdentifier());
 
         // 为用户2创建一个活跃订单
-        [$order3] = $this->createActiveOrderForUser((string) $user2->getId());
+        [$order3] = $this->createActiveOrderForUser($user2->getUserIdentifier());
 
         // 查找用户1的活跃订单
-        $user1ActiveOrders = $this->billingService->findActiveOrders((string) $user1->getId());
+        $user1ActiveOrders = $this->billingService->findActiveOrders($user1->getUserIdentifier());
 
         // 验证结果
         $this->assertCount(2, $user1ActiveOrders);
@@ -353,7 +334,7 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         $this->assertContains($order2->getId(), $orderIds);
 
         // 查找用户2的活跃订单
-        $user2ActiveOrders = $this->billingService->findActiveOrders((string) $user2->getId());
+        $user2ActiveOrders = $this->billingService->findActiveOrders($user2->getUserIdentifier());
         $this->assertCount(1, $user2ActiveOrders);
         $this->assertSame($order3->getId(), $user2ActiveOrders[0]->getId());
     }
@@ -398,14 +379,11 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
         // 创建测试用户
         $user = $this->createNormalUser('tiered-user@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
         // 开始计费
         $productId = $product->getId();
         $this->assertNotNull($productId, 'Product ID should not be null');
 
-        $order = $this->billingService->startBilling($productId, (string) $user->getId());
+        $order = $this->billingService->startBilling($productId, $user->getUserIdentifier());
 
         // 手动设置开始时间为90分钟前，确保跨越多个价格层级
         $startTime = new \DateTimeImmutable('-90 minutes');
@@ -460,11 +438,7 @@ final class DurationBillingServiceIntegrationTest extends AbstractIntegrationTes
     private function createActiveOrder(): array
     {
         $user = $this->createNormalUser('test-user-' . uniqid() . '@test.com', 'password');
-
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
-        return $this->createActiveOrderForUser((string) $user->getId());
+        return $this->createActiveOrderForUser($user->getUserIdentifier());
     }
 
     /**

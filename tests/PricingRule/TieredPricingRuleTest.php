@@ -131,19 +131,24 @@ final class TieredPricingRuleTest extends TestCase
 
         $this->assertIsArray($serialized);
         $this->assertArrayHasKey('tiers', $serialized);
-        $this->assertCount(2, $serialized['tiers']);
 
+        /** @var array{tiers: list<array<string, mixed>>} $serialized */
+        $tiers = $serialized['tiers'];
+        $this->assertCount(2, $tiers);
+
+        $this->assertIsArray($tiers[0]);
         $this->assertEquals([
             'start_minutes' => 0,
             'end_minutes' => 60,
             'price_per_hour' => 10.0,
-        ], $serialized['tiers'][0]);
+        ], $tiers[0]);
 
+        $this->assertIsArray($tiers[1]);
         $this->assertEquals([
             'start_minutes' => 60,
             'end_minutes' => null,
             'price_per_hour' => 8.0,
-        ], $serialized['tiers'][1]);
+        ], $tiers[1]);
     }
 
     public function testDeserialize(): void

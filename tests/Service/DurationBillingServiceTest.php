@@ -5,6 +5,7 @@ namespace Tourze\DurationBillingBundle\Tests\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Constraint\Callback;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tourze\DurationBillingBundle\Contract\DurationBillingOrderRepositoryInterface;
@@ -33,15 +34,15 @@ final class DurationBillingServiceTest extends TestCase
 {
     private DurationBillingService $service;
 
-    private DurationBillingProductRepositoryInterface $productRepository;
+    private DurationBillingProductRepositoryInterface&MockObject $productRepository;
 
-    private DurationBillingOrderRepositoryInterface $orderRepository;
+    private DurationBillingOrderRepositoryInterface&MockObject $orderRepository;
 
-    private OrderStateMachine $stateMachine;
+    private OrderStateMachine&MockObject $stateMachine;
 
-    private PriceCalculator $priceCalculator;
+    private PriceCalculator&MockObject $priceCalculator;
 
-    private EventDispatcherInterface $eventDispatcher;
+    private EventDispatcherInterface&MockObject $eventDispatcher;
 
     public function testStartBillingCreatesOrder(): void
     {
@@ -456,25 +457,41 @@ final class DurationBillingServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->productRepository = $this->createMock(DurationBillingProductRepositoryInterface::class);
-        $this->orderRepository = $this->createMock(DurationBillingOrderRepositoryInterface::class);
+        /** @var DurationBillingProductRepositoryInterface&MockObject $productRepository */
+        $productRepository = $this->createMock(DurationBillingProductRepositoryInterface::class);
+        $this->productRepository = $productRepository;
+
+        /** @var DurationBillingOrderRepositoryInterface&MockObject $orderRepository */
+        $orderRepository = $this->createMock(DurationBillingOrderRepositoryInterface::class);
+        $this->orderRepository = $orderRepository;
+
         /**
          * 使用具体类 OrderStateMachine 创建 Mock 的理由：
          * 1. OrderStateMachine 没有对应的接口定义
          * 2. 该类是服务层的内部实现，不需要对外暴露接口
          * 3. 在测试中我们只需要 mock 其行为，不需要实际的状态转换逻辑
          * 替代方案：如果未来需要更灵活的状态机实现，可以考虑创建 StateMachineInterface
+         *
+         * @var OrderStateMachine&MockObject $stateMachine
          */
-        $this->stateMachine = $this->createMock(OrderStateMachine::class);
+        $stateMachine = $this->createMock(OrderStateMachine::class);
+        $this->stateMachine = $stateMachine;
+
         /**
          * 使用具体类 PriceCalculator 创建 Mock 的理由：
          * 1. PriceCalculator 没有对应的接口定义
          * 2. 该类是服务层的内部实现，专门用于价格计算
          * 3. 在测试中我们需要控制价格计算的返回值，而不是执行实际计算
          * 替代方案：如果未来有多种价格计算策略，可以考虑创建 PriceCalculatorInterface
+         *
+         * @var PriceCalculator&MockObject $priceCalculator
          */
-        $this->priceCalculator = $this->createMock(PriceCalculator::class);
-        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+        $priceCalculator = $this->createMock(PriceCalculator::class);
+        $this->priceCalculator = $priceCalculator;
+
+        /** @var EventDispatcherInterface&MockObject $eventDispatcher */
+        $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+        $this->eventDispatcher = $eventDispatcher;
 
         // 直接实例化服务，传递所有依赖的 mock
         $entityManager = $this->createMock(EntityManagerInterface::class);

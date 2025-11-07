@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tourze\DurationBillingBundle\Tests\Repository;
 
-use BizUserBundle\Entity\BizUser;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -95,18 +95,14 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
         $user1 = $this->createNormalUser('user1@test.com', 'password');
         $user2 = $this->createNormalUser('user2@test.com', 'password');
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user1);
-        self::assertInstanceOf(BizUser::class, $user2);
-
         // 为用户1创建多个订单
-        $activeOrder1 = $this->createTestOrderForUser((string) $user1->getId(), OrderStatus::ACTIVE);
-        $activeOrder2 = $this->createTestOrderForUser((string) $user1->getId(), OrderStatus::ACTIVE);
-        $frozenOrder = $this->createTestOrderForUser((string) $user1->getId(), OrderStatus::FROZEN);
-        $completedOrder = $this->createTestOrderForUser((string) $user1->getId(), OrderStatus::COMPLETED);
+        $activeOrder1 = $this->createTestOrderForUser($user1->getUserIdentifier(), OrderStatus::ACTIVE);
+        $activeOrder2 = $this->createTestOrderForUser($user1->getUserIdentifier(), OrderStatus::ACTIVE);
+        $frozenOrder = $this->createTestOrderForUser($user1->getUserIdentifier(), OrderStatus::FROZEN);
+        $completedOrder = $this->createTestOrderForUser($user1->getUserIdentifier(), OrderStatus::COMPLETED);
 
         // 为用户2创建一个活跃订单
-        $user2ActiveOrder = $this->createTestOrderForUser((string) $user2->getId(), OrderStatus::ACTIVE);
+        $user2ActiveOrder = $this->createTestOrderForUser($user2->getUserIdentifier(), OrderStatus::ACTIVE);
 
         self::getEntityManager()->persist($activeOrder1);
         self::getEntityManager()->persist($activeOrder2);
@@ -116,7 +112,7 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
         self::getEntityManager()->flush();
 
         // 查找用户1的活跃订单
-        $user1ActiveOrders = $this->repository->findActiveOrdersByUser((string) $user1->getId());
+        $user1ActiveOrders = $this->repository->findActiveOrdersByUser($user1->getUserIdentifier());
 
         // 验证结果
         $this->assertCount(3, $user1ActiveOrders); // ACTIVE(2) + FROZEN(1)
@@ -127,7 +123,7 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
         $this->assertNotContains($completedOrder->getId(), $orderIds);
 
         // 查找用户2的活跃订单
-        $user2ActiveOrders = $this->repository->findActiveOrdersByUser((string) $user2->getId());
+        $user2ActiveOrders = $this->repository->findActiveOrdersByUser($user2->getUserIdentifier());
         $this->assertCount(1, $user2ActiveOrders);
         $this->assertSame($user2ActiveOrder->getId(), $user2ActiveOrders[0]->getId());
 
@@ -140,10 +136,7 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
     {
         // 创建测试用户
         $user = $this->createNormalUser('count-user@test.com', 'password');
-
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-        $userId = (string) $user->getId();
+        $userId = $user->getUserIdentifier();
 
         // 创建不同状态的订单
         $activeOrder1 = $this->createTestOrderForUser($userId, OrderStatus::ACTIVE);
@@ -172,9 +165,7 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
     {
         // 创建带业务引用的订单
         $user = $this->createNormalUser('business-user@test.com', 'password');
-        self::assertInstanceOf(BizUser::class, $user);
-
-        $order = $this->createTestOrderForUser((string) $user->getId(), OrderStatus::ACTIVE);
+        $order = $this->createTestOrderForUser($user->getUserIdentifier(), OrderStatus::ACTIVE);
         $order->setMetadata([
             'business_type' => 'rental',
             'business_id' => 'RENTAL-001',
@@ -203,9 +194,7 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
     {
         // 创建冻结订单
         $user = $this->createNormalUser('frozen-user@test.com', 'password');
-        self::assertInstanceOf(BizUser::class, $user);
-
-        $frozenOrder = $this->createTestOrderForUser((string) $user->getId(), OrderStatus::FROZEN);
+        $frozenOrder = $this->createTestOrderForUser($user->getUserIdentifier(), OrderStatus::FROZEN);
 
         $this->persistAndFlush($frozenOrder);
 
@@ -224,9 +213,7 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
     {
         // 创建活跃订单
         $user = $this->createNormalUser('end-user@test.com', 'password');
-        self::assertInstanceOf(BizUser::class, $user);
-
-        $activeOrder = $this->createTestOrderForUser((string) $user->getId(), OrderStatus::ACTIVE);
+        $activeOrder = $this->createTestOrderForUser($user->getUserIdentifier(), OrderStatus::ACTIVE);
 
         $this->persistAndFlush($activeOrder);
 
@@ -255,12 +242,10 @@ final class DurationBillingOrderRepositoryIntegrationTest extends AbstractReposi
 
     private function createTestOrder(OrderStatus $status = OrderStatus::ACTIVE): DurationBillingOrder
     {
-        $user = $this->createNormalUser('user-' . uniqid() . '@test.com', 'password');
+        // 直接使用字符串用户ID，避免创建用户实体
+        $userId = 'test-user-' . uniqid();
 
-        // 类型安全：强制转换为 BizUser
-        self::assertInstanceOf(BizUser::class, $user);
-
-        return $this->createTestOrderForUser((string) $user->getId(), $status);
+        return $this->createTestOrderForUser($userId, $status);
     }
 
     private function createTestOrderForUser(string $userId, OrderStatus $status = OrderStatus::ACTIVE): DurationBillingOrder

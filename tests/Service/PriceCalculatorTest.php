@@ -220,6 +220,18 @@ use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
         $details = $this->calculator->getPriceDetails($product, $pricingRule, 60);
 
         $this->assertIsArray($details);
+        /**
+         * @var array{
+         *     total_minutes: int,
+         *     free_minutes: int,
+         *     billed_minutes: int,
+         *     base_price: float,
+         *     final_price: float,
+         *     adjustment_reason: string|null,
+         *     pricing_rule_description: string,
+         *     product_constraints: array{free_minutes: int, min_amount: float|null, max_amount: float|null}
+         * } $details
+         */
         $this->assertSame(60, $details['total_minutes']);
         $this->assertSame(30, $details['free_minutes']);
         $this->assertSame(30, $details['billed_minutes']);
@@ -228,9 +240,12 @@ use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
         $this->assertSame('最低消费', $details['adjustment_reason']);
         $this->assertSame('按小时计费', $details['pricing_rule_description']);
         $this->assertArrayHasKey('product_constraints', $details);
-        $this->assertSame(30, $details['product_constraints']['free_minutes']);
-        $this->assertSame(20.0, $details['product_constraints']['min_amount']);
-        $this->assertSame(100.0, $details['product_constraints']['max_amount']);
+
+        $constraints = $details['product_constraints'];
+        $this->assertIsArray($constraints);
+        $this->assertSame(30, $constraints['free_minutes']);
+        $this->assertSame(20.0, $constraints['min_amount']);
+        $this->assertSame(100.0, $constraints['max_amount']);
     }
 
     public function testGetPriceDetailsWithNullConstraints(): void
@@ -253,9 +268,18 @@ use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
         $details = $this->calculator->getPriceDetails($product, $pricingRule, 60);
 
-        $this->assertSame(0, $details['product_constraints']['free_minutes']);
-        $this->assertNull($details['product_constraints']['min_amount']);
-        $this->assertNull($details['product_constraints']['max_amount']);
+        $this->assertIsArray($details);
+        /**
+         * @var array{
+         *     adjustment_reason: string|null,
+         *     product_constraints: array{free_minutes: int, min_amount: float|null, max_amount: float|null}
+         * } $details
+         */
+        $constraints = $details['product_constraints'];
+        $this->assertIsArray($constraints);
+        $this->assertSame(0, $constraints['free_minutes']);
+        $this->assertNull($constraints['min_amount']);
+        $this->assertNull($constraints['max_amount']);
         $this->assertNull($details['adjustment_reason']);
     }
 
