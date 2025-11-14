@@ -2,63 +2,65 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-一个 Symfony Bundle，用于按时长计费的商品和订单管理。
+A Symfony bundle for time-based billing management, designed for parking lots, shared power banks, shared bikes, and other duration-based billing scenarios.
 
-## 特性
+## Features
 
-- 支持 **按时长计费**，适用于停车场收费、共享充电宝等场景
-- 支持 **预付费模式**，可处理预付金额不足的情况
-- 支持 **计费暂停**，用于处理异常情况或特殊需求
-- 支持 **多种定价规则**，包括阶梯定价和按小时定价
-- 支持 **状态机管理**，订单状态转换规范化
-- 提供 **完整的测试覆盖**，90%+ 的测试覆盖率保证
+- ✅ **Time-based Billing**: Precise duration-based billing for all types of sharing economy scenarios
+- 💳 **Prepaid Mode**: Support for prepaid amounts with automatic handling of insufficient funds
+- ⏸️ **Billing Pause**: Support for pausing and resuming order billing
+- 📊 **Flexible Pricing**: Support for tiered pricing, hourly pricing, and various pricing strategies
+- 🔄 **State Machine Management**: Comprehensive order state transition mechanism for standardized business flows
+- 🧪 **High Test Coverage**: 90%+ test coverage ensuring code quality and stability
+- 📡 **Event-driven**: Rich event system for business extension and integration
 
-## 安装
+## Installation
 
-通过 Composer 安装：
+Install via Composer:
 
 ```bash
 composer require tourze/duration-billing-bundle
 ```
 
-在 `config/bundles.php` 中注册 Bundle：
+Register the bundle in your Symfony application:
 
 ```php
+// config/bundles.php
 return [
     // ...
     Tourze\DurationBillingBundle\DurationBillingBundle::class => ['all' => true],
 ];
 ```
 
-## 使用
+## Quick Start
 
-### 1. 创建计费商品
+### 1. Create Billing Product
 
 ```php
 use Tourze\DurationBillingBundle\Entity\DurationBillingProduct;
 use Tourze\DurationBillingBundle\PricingRule\HourlyPricingRule;
 use Tourze\DurationBillingBundle\Enum\RoundingMode;
 
-// 创建计费商品
+// Create billing product
 $product = new DurationBillingProduct();
-$product->setName('充电宝A');
-$product->setDescription('共享充电宝商品A');
+$product->setName('Power Bank A');
+$product->setDescription('Shared power bank product A');
 $product->setActive(true);
 
-// 设置定价规则：每小时 100 元
+// Set pricing rule: 100 per hour, round up
 $rule = new HourlyPricingRule(100.0, RoundingMode::ROUND_UP);
 $product->setPricingRule($rule);
 
-// 设置限制条件
-$product->setFreeMinutes(30);        // 免费 30 分钟
-$product->setMinAmount(50.0);        // 最低收费 50 元
-$product->setMaxAmount(1000.0);      // 最高收费 1000 元
+// Set billing limits
+$product->setFreeMinutes(30);        // First 30 minutes free
+$product->setMinAmount(50.0);        // Minimum charge 50
+$product->setMaxAmount(1000.0);      // Maximum charge 1000
 
 $entityManager->persist($product);
 $entityManager->flush();
 ```
 
-### 2. 开始计费
+### 2. Start Billing
 
 ```php
 use Tourze\DurationBillingBundle\Service\DurationBillingServiceInterface;
@@ -71,25 +73,25 @@ class BillingController extends AbstractController
     ): Response {
         try {
             $order = $billingService->startBilling(
-                $productId,
-                $this->getUser()->getId(),
-                'USER_ORDER_001',  // 外部订单号
-                200.0              // 预付金额
+                productId: $productId,
+                userId: $this->getUser()->getId(),
+                externalOrderCode: 'USER_ORDER_001',  // External order code
+                prepaidAmount: 200.0                   // Prepaid amount
             );
-            
+
             return $this->json([
                 'success' => true,
                 'order_code' => $order->getOrderCode(),
-                'started_at' => $order->getStartedAt()->format('Y-m-d H:i:s'),
+                'started_at' => $order->getStartTime()->format('Y-m-d H:i:s'),
             ]);
         } catch (ProductNotFoundException $e) {
-            return $this->json(['error' => '商品不存在'], 404);
+            return $this->json(['error' => 'Product not found'], 404);
         }
     }
 }
 ```
 
-### 3. 结束计费
+### 3. End Billing
 
 ```php
 public function end(
@@ -98,7 +100,7 @@ public function end(
 ): Response {
     try {
         $result = $billingService->endBilling($orderCode);
-        
+
         return $this->json([
             'success' => true,
             'billing_minutes' => $result->getBillableMinutes(),
@@ -109,49 +111,49 @@ public function end(
             'refund_amount' => $result->getOrder()->getRefundAmount(),
         ]);
     } catch (OrderNotFoundException $e) {
-        return $this->json(['error' => '订单不存在'], 404);
+        return $this->json(['error' => 'Order not found'], 404);
     } catch (OrderAlreadyEndedException $e) {
-        return $this->json(['error' => '订单已结束'], 400);
+        return $this->json(['error' => 'Order already ended'], 400);
     }
 }
 ```
 
-## 高级特性
+## Advanced Features
 
-### 阶梯定价
+### Tiered Pricing
 
 ```php
 use Tourze\DurationBillingBundle\PricingRule\TieredPricingRule;
 use Tourze\DurationBillingBundle\ValueObject\PriceTier;
 
-// 阶梯定价规则
+// Create tiered pricing rule
 $tiers = [
-    new PriceTier(0, 60, 100.0),      // 0-60分钟：100元/小时
-    new PriceTier(60, 180, 80.0),     // 60-180分钟：80元/小时
-    new PriceTier(180, null, 60.0),   // 180分钟后：60元/小时
+    new PriceTier(0, 60, 100.0),      // 0-60 minutes: 100 per hour
+    new PriceTier(60, 180, 80.0),     // 60-180 minutes: 80 per hour
+    new PriceTier(180, null, 60.0),   // 180+ minutes: 60 per hour
 ];
 
 $rule = new TieredPricingRule($tiers);
 $product->setPricingRule($rule);
 ```
 
-### 订单暂停
+### Order Pause and Resume
 
 ```php
-// 暂停订单计费
+// Pause order billing
 $billingService->freezeBilling($orderCode);
 
-// 恢复订单计费
+// Resume order billing
 $billingService->resumeBilling($orderCode);
 
-// 查找超时的暂停订单
+// Find expired frozen orders
 $expiredOrders = $billingService->findExpiredFrozenOrders(
-    freezeMinutes: 30,  // 暂停超过30分钟的订单
+    freezeMinutes: 30,  // Orders frozen for more than 30 minutes
     limit: 100
 );
 ```
 
-### 事件监听
+### Event Listening
 
 ```php
 use Tourze\DurationBillingBundle\Event\BillingEndedEvent;
@@ -163,29 +165,31 @@ class BillingEventSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
+            BillingStartedEvent::class => 'onBillingStarted',
             BillingEndedEvent::class => 'onBillingEnded',
             RefundRequiredEvent::class => 'onRefundRequired',
+            OrderFrozenEvent::class => 'onOrderFrozen',
         ];
     }
-    
+
     public function onBillingEnded(BillingEndedEvent $event): void
     {
         $order = $event->getOrder();
         $priceResult = $event->getPriceResult();
-        
-        // 发送通知
+
+        // Send billing notification
         $this->notificationService->sendBillingNotification(
             $order->getUserId(),
             $priceResult->getFinalPrice()
         );
     }
-    
+
     public function onRefundRequired(RefundRequiredEvent $event): void
     {
         $order = $event->getOrder();
         $refundAmount = $event->getRefundAmount();
-        
-        // 处理退款
+
+        // Process refund
         $this->refundService->processRefund(
             $order->getExternalOrderCode(),
             $refundAmount
@@ -194,57 +198,146 @@ class BillingEventSubscriber implements EventSubscriberInterface
 }
 ```
 
-## 服务
+## Core Services
 
-Bundle 提供以下核心服务：
+The bundle provides the following core services:
 
-- `duration_billing.service` - 计费服务
-- `duration_billing.state_machine` - 订单状态机
-- `duration_billing.price_calculator` - 价格计算器
-- `duration_billing.order_repository` - 订单仓储
-- `duration_billing.product_repository` - 商品仓储
+| Service ID | Description |
+|------------|-------------|
+| `duration_billing.service` | Main billing service, handles order creation, updates, and settlement |
+| `duration_billing.state_machine` | Order state machine, manages state transition logic |
+| `duration_billing.price_calculator` | Price calculator, calculates fees based on pricing rules |
+| `duration_billing.order_repository` | Order data repository |
+| `duration_billing.product_repository` | Product data repository |
 
-## 定价规则
+## Order States
 
-支持以下定价规则类型：
-
-- 按小时计费规则
-- 阶梯定价规则
-- 自定义定价规则
-- 价格限制设置
-
-## 异常
-
-Bundle 定义了以下异常类：
-
-- `DurationBillingException` - 基础异常类
-- `ProductNotFoundException` - 商品不存在
-- `OrderNotFoundException` - 订单不存在
-- `OrderAlreadyEndedException` - 订单已结束
-- `InvalidOrderStateException` - 无效的订单状态
-- `InvalidPricingRuleException` - 无效的定价规则
-- `NegativeBillingTimeException` - 负计费时长
-- `InvalidPrepaidAmountException` - 无效的预付金额
-
-## 测试
-
-运行测试：
-
-```bash
-# 单元测试
-vendor/bin/phpunit --testsuite unit
-
-# 集成测试
-vendor/bin/phpunit --testsuite integration
-
-# 全部测试
-vendor/bin/phpunit
+```
+PENDING → ACTIVE → ENDED
+    ↓         ↑
+  FROZEN ────┘
+    ↓
+  EXPIRED
 ```
 
-## 许可证
+State descriptions:
+- `PENDING`: Pending activation (created but not yet started billing)
+- `ACTIVE`: Active billing in progress
+- `FROZEN`: Billing paused
+- `ENDED`: Completed
+- `EXPIRED`: Expired (abnormal state)
 
-MIT License
+## Pricing Rules
 
-## 贡献
+Supports the following pricing strategies:
 
-欢迎提交 Issue 和 Pull Request！
+### Hourly Pricing Rule (HourlyPricingRule)
+```php
+use Tourze\DurationBillingBundle\PricingRule\HourlyPricingRule;
+use Tourze\DurationBillingBundle\Enum\RoundingMode;
+
+$rule = new HourlyPricingRule(
+    pricePerHour: 100.0,
+    roundingMode: RoundingMode::ROUND_UP
+);
+```
+
+### Tiered Pricing Rule (TieredPricingRule)
+```php
+use Tourze\DurationBillingBundle\PricingRule\TieredPricingRule;
+use Tourze\DurationBillingBundle\ValueObject\PriceTier;
+
+$tiers = [
+    new PriceTier(0, 60, 100.0),      // First hour
+    new PriceTier(60, 180, 80.0),     // 2-3 hours
+    new PriceTier(180, null, 60.0),   // After 3 hours
+];
+
+$rule = new TieredPricingRule($tiers);
+```
+
+### Custom Pricing Rules
+Implement the `PricingRuleInterface` to create custom pricing logic:
+
+```php
+use Tourze\DurationBillingBundle\Contract\PricingRuleInterface;
+use Tourze\DurationBillingBundle\ValueObject\PriceResult;
+
+class CustomPricingRule implements PricingRuleInterface
+{
+    public function calculatePrice(
+        \DateTimeInterface $startTime,
+        \DateTimeInterface $endTime,
+        DurationBillingProduct $product
+    ): PriceResult {
+        // Implement custom billing logic
+        return new PriceResult(/* ... */);
+    }
+}
+```
+
+## Exception Handling
+
+The bundle defines a complete exception hierarchy:
+
+- `DurationBillingException` - Base exception class
+- `ProductNotFoundException` - Product not found
+- `OrderNotFoundException` - Order not found
+- `OrderAlreadyEndedException` - Order already ended
+- `InvalidOrderStateException` - Invalid order state
+- `InvalidPricingRuleException` - Invalid pricing rule
+- `NegativeBillingTimeException` - Negative billing time
+- `InvalidPrepaidAmountException` - Invalid prepaid amount
+
+## Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+composer test
+
+# Run tests with coverage report
+composer test-coverage
+
+# Run code quality checks
+composer quality
+```
+
+## Configuration
+
+Default configuration works for most scenarios. For customization, create `config/packages/tourze_duration_billing.yaml`:
+
+```yaml
+tourze_duration_billing:
+    # Default rounding mode
+    default_rounding_mode: 'ROUND_UP'
+
+    # Order timeout settings (minutes)
+    order_timeout_minutes: 1440  # 24 hours
+
+    # Frozen order timeout settings (minutes)
+    frozen_order_timeout_minutes: 60
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+- Follow PSR-12 coding standards
+- Add tests for new features
+- Ensure all tests pass before submitting PR
+- Update relevant documentation
+
+## Support
+
+Need help or have suggestions? Please:
+
+1. Check the [documentation](docs/)
+2. Search [existing Issues](https://github.com/tourze/php-monorepo/issues)
+3. Create a new Issue to describe your problem
+4. Submit a Pull Request to contribute code
